@@ -24,6 +24,7 @@ export default function Home() {
     password: ''
   });
   const [isPostgreSQLView, setIsPostgreSQLView] = useState(false); // New state for PostgreSQL view
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'connected'>('idle');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -44,14 +45,7 @@ export default function Home() {
     setIsPostgreSQLView(false);
   };
 
-  // Open modal automatically after 5 seconds
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      openModal();
-    }, 5000);
 
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleContinue = () => {
     // Check if it's a database connection link
@@ -87,8 +81,51 @@ export default function Home() {
   const handleConnect = () => {
     // Handle PostgreSQL connection
     console.log('Connecting to PostgreSQL with details:', connectionDetails);
-    // In a real app, this would establish the actual connection
-    closeModal();
+
+    // Set loading state
+    setConnectionStatus('connecting');
+
+    // Simulate connection process
+    setTimeout(() => {
+      setConnectionStatus('connected');
+
+      // Add node to canvas after successful connection
+      setTimeout(() => {
+        const canvas = document.querySelector('.bg-white.rounded-lg.h-full.flex.items-center.justify-center');
+        if (canvas) {
+          // Hide the initial canvas content
+          const initialContent = canvas.querySelector('.text-center.p-8');
+          if (initialContent) {
+            (initialContent as HTMLElement).style.display = 'none';
+          }
+
+          const nodeElement = document.createElement('div');
+          nodeElement.className = 'absolute bg-green-100 border border-green-300 rounded-md p-3 shadow-md';
+          nodeElement.style.left = '50%';
+          nodeElement.style.top = '50%';
+          nodeElement.style.transform = 'translate(-50%, -50%)';
+          nodeElement.innerHTML = `
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 bg-green-500 rounded flex items-center justify-center">
+                <span class="text-white font-bold">D</span>
+              </div>
+              <div>
+                <p class="font-medium text-sm">${connectionDetails.database || 'Database'}</p>
+                <p class="text-xs text-gray-500">PostgreSQL</p>
+              </div>
+            </div>
+          `;
+          canvas.appendChild(nodeElement);
+
+          // Update canvas text
+          const canvasText = canvas.querySelector('h3');
+          if (canvasText) {
+            canvasText.textContent = `PostgreSQL connection to ${connectionDetails.database || 'Database'} added to workflow`;
+          }
+        }
+        closeModal();
+      }, 500);
+    }, 1500);
   };
 
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -614,9 +651,10 @@ export default function Home() {
                     <div className="mt-6 space-y-2">
                       <button
                         onClick={handleConnect}
-                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        disabled={connectionStatus === 'connecting'}
+                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Connect
+                        {connectionStatus === 'connecting' ? 'Connecting...' : 'Connect'}
                       </button>
 
                       <button
@@ -656,9 +694,28 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="border border-gray-200 rounded-md p-4 bg-blue-50">
+                  <div className="border border-gray-200 rounded-md p-4">
                     <h4 className="font-medium mb-2">Connection Status</h4>
-                    <p className="text-sm text-gray-600">Connection details configured successfully. Click "Connect" to establish connection.</p>
+                    {connectionStatus === 'connecting' ? (
+                      <p className="text-sm text-blue-600 flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Connecting to PostgreSQL...
+                      </p>
+                    ) : connectionStatus === 'connected' ? (
+                      <div className="text-sm text-green-600">
+                        <p className="flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          Connected to PostgreSQL database: <span className="font-mono">{connectionDetails.database}</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-600">Connection details configured successfully. Click "Connect" to establish connection.</p>
+                    )}
                   </div>
                 </div>
               </div>
